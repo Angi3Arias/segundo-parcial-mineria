@@ -21,6 +21,7 @@ def localizar_dataset(base_dir):
     rutas_posibles = [
         os.path.join(base_dir, "Dataset.csv"),
         os.path.join(base_dir, "..", "ASIGNACION", "Dataset.csv"),
+        os.path.join(base_dir, "..", "..", "ASIGNACION", "Dataset.csv"),
         os.path.join(base_dir, "ASIGNACION", "Dataset.csv"),
     ]
     for ruta in rutas_posibles:

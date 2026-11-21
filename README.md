@@ -6,15 +6,16 @@ Proyecto para modelar mediante una Red Neuronal Artificial (RNA) los grupos obte
 
 ## Estructura del Proyecto
 
-* **`ANALISIS/`**: Código y carpeta `GRAFICAS/` del análisis exploratorio inicial.
-* **`1) Preprocesamiento/`**: Dataset original (`Dataset.csv`), código del **Inciso 1** (limpieza de datos, agrupamiento con DBSCAN), `dataset_preprocesado.csv` y carpeta `GRAFICAS/`.
+* **`PARTE_1/`**: Desarrollo completo de la Etapa 1 (análisis exploratorio y preprocesamiento):
+  * **`PARTE_1/ANALISIS/`**: Código y carpeta `GRAFICAS/` del análisis exploratorio inicial.
+  * **`PARTE_1/1) Preprocesamiento/`**: Dataset original (`Dataset.csv`), código del **Inciso 1** (limpieza de datos, agrupamiento con DBSCAN), `dataset_preprocesado.csv` y carpeta `GRAFICAS/`.
 * **`Examen_Documento/`**: Redacción formal del examen en LaTeX (compatible con Overleaf) e imágenes en `Inciso_1/`.
 
 ---
 
-## 1. Carpeta `ANALISIS/` (Exploración y Plan de Limpieza)
+## 1. Carpeta `PARTE_1/ANALISIS/` (Exploración y Plan de Limpieza)
 
-Contiene el script **`analisis_datos.py`** y las gráficas generadas en **`ANALISIS/GRAFICAS/`** para revisar los datos originales:
+Contiene el script **`analisis_datos.py`** y las gráficas generadas en **`PARTE_1/ANALISIS/GRAFICAS/`** para revisar los datos originales:
 
 * **¿Qué se hizo?** Se generaron gráficas de calidad de datos, histogramas de distribución, matriz de correlación, dispersión en 2D y proyección PCA 2D.
 * **¿Para qué sirvió?** Para ver cómo venían los datos y definir el plan de limpieza:
@@ -24,9 +25,9 @@ Contiene el script **`analisis_datos.py`** y las gráficas generadas en **`ANALI
 
 ---
 
-## 2. Carpeta `1) Preprocesamiento/` (Inciso 1 del Examen)
+## 2. Carpeta `PARTE_1/1) Preprocesamiento/` (Inciso 1 del Examen)
 
-Contiene el script **`preprocesamiento.py`** y las gráficas generadas en **`1) Preprocesamiento/GRAFICAS/`**, donde se implementa el plan definido en el análisis cumpliendo con la **Etapa 1**:
+Contiene el script **`preprocesamiento.py`** y las gráficas generadas en **`PARTE_1/1) Preprocesamiento/GRAFICAS/`**, donde se implementa el plan definido en el análisis cumpliendo con la **Etapa 1**:
 
 1. **Limpieza:** Se eliminó la columna vacía residual y las filas duplicadas.
 2. **Estandarización:** Se aplicó Z-score (`StandardScaler`) a las 16 variables numéricas para que todas tengan el mismo peso.
@@ -43,10 +44,10 @@ Contiene el script **`preprocesamiento.py`** y las gráficas generadas en **`1) 
 
 1. **Ejecutar el análisis exploratorio:**
    ```bash
-   python ANALISIS/analisis_datos.py
+   python PARTE_1/ANALISIS/analisis_datos.py
    ```
 
 2. **Ejecutar el preprocesamiento (Inciso 1):**
    ```bash
-   python "1) Preprocesamiento/preprocesamiento.py"
+   python "PARTE_1/1) Preprocesamiento/preprocesamiento.py"
    ```
