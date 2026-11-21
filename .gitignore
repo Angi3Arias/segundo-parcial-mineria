@@ -7,3 +7,6 @@ __pycache__/
 pycache/
 *.py[cod]
 *$py.class
+
+# Ignorar archivos comprimidos
+*.zip
