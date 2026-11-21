@@ -82,6 +82,11 @@ En esta etapa realizamos una inspección inicial del archivo `Dataset.csv` con e
   - **Forma:** `Compactness` y `ShapeFactor3` (`0.9987`), `AspectRation` y `Compactness` (`-0.9877`), `Eccentricity` y `ShapeFactor3` (`-0.9811`).
 - Ninguna columna es constante (todas cambian y tienen varianza mayor a cero).
 
+**¿Por qué se conservaron las 16 variables a pesar de esta alta redundancia?**
+1. **No existe una columna `Clase` previa para decidir cuál borrar:** Normalmente, entre dos variables redundantes se conserva la que mejor predice la clase objetivo. Como este dataset no trae etiquetas de clase (apenas se van a generar con DBSCAN), descartar una de las dos a ciegas sería arbitrario.
+2. **Sus pequeñas diferencias ayudan a detectar ruido:** Aunque en granos normales medidas como `Area` y `ConvexArea` son casi idénticas (`0.9999`), en granos rotos o deformes sí difieren, lo que ayuda a identificar puntos anómalos.
+3. **El modelo final es una Red Neuronal (MLP):** Las redes neuronales multicapa manejan variables correlacionadas ajustando automáticamente sus pesos y su regularización, por lo que pueden aprovechar los 16 atributos originales sin inconveniente.
+
 ---
 
 ## 4. Diagramas de Dispersión (`4_dispersion_variables_originales.png`)
@@ -136,6 +141,6 @@ Con base en todo lo observado en el análisis, en `Preprocesamiento/preprocesami
 | :--- | :--- |
 | **Columna vacía `Unnamed: 16`:** Generada por una coma al final de cada fila del CSV (las 16 variables reales tienen 0 nulos). | **Eliminar la columna vacía.** No es necesario borrar ni rellenar filas porque los datos de los granos están completos. |
 | **68 filas duplicadas:** Registros repetidos exactamente iguales (0.50% del total). | **Borrar los duplicados** con `drop_duplicates()` para evitar que inflen la densidad artificialmente. |
-| **Varianza en todas las variables:** Ninguna columna es constante (todas varían y aportan información). | **Conservar las 16 variables** para la etapa de agrupamiento. |
+| **Variables correlacionadas pero ninguna constante:** Todas tienen varianza $> 0$, aunque hay pares con alta redundancia ($|r| > 0.95$). | **Conservar las 16 variables:** No hay una etiqueta de `Clase` previa para decidir cuál descartar sin sesgo, sus pequeñas diferencias ayudan a detectar granos deformes y la Red Neuronal (MLP) ajusta sus pesos ante variables correlacionadas. |
 | **Escalas muy desiguales:** `Area` supera los 250,000 mientras que los factores de forma son menores a 0.01. | **Estandarizar con Z-score** (`StandardScaler`) para poner todas las variables en la misma escala (media 0 y desviación 1) y que ninguna domine al calcular distancias. |
 | **Formas irregulares y puntos aislados:** Grupos con distintas densidades y granos sueltos en las orillas. | **Aplicar DBSCAN** para detectar y eliminar los puntos de ruido global (`-1`), medir la calidad de los grupos con métricas y asignarles la columna **`Clase`**. |
