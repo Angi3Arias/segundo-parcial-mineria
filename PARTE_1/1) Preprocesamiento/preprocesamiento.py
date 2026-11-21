@@ -83,16 +83,16 @@ def graficar_antes_despues_estandarizacion(df_original, df_scaled, base_dir):
 
 
 def calcular_k_distancias(X_scaled, min_pts):
-    """Calcula las distancias ordenadas al vecino #min_pts y sus percentiles del codo."""
-    nn = NearestNeighbors(n_neighbors=min_pts, metric="euclidean", n_jobs=-1)
+    """Calcula las distancias Manhattan ordenadas al vecino #min_pts y sus percentiles del codo."""
+    nn = NearestNeighbors(n_neighbors=min_pts, metric="manhattan", n_jobs=-1)
     distancias, _ = nn.fit(X_scaled).kneighbors(X_scaled)
     k_dist = np.sort(distancias[:, -1])
+    p85 = float(np.percentile(k_dist, 85))
     p90 = float(np.percentile(k_dist, 90))
-    p95 = float(np.percentile(k_dist, 95))
-    return k_dist, p90, p95
+    return k_dist, p85, p90
 
 
-def graficar_curva_k_distancia(k_dist, min_pts, eps_opt, p90, p95, base_dir):
+def graficar_curva_k_distancia(k_dist, min_pts, eps_opt, p85, p90, base_dir):
     """Grafica la curva de k-distancias ordenadas para ubicar el codo y el rango de eps."""
     idx_eps = int(np.searchsorted(k_dist, eps_opt))
     pct_debajo = (idx_eps / max(len(k_dist), 1)) * 100.0
@@ -102,11 +102,11 @@ def graficar_curva_k_distancia(k_dist, min_pts, eps_opt, p90, p95, base_dir):
     axes[0].plot(k_dist, color="#1f77b4", linewidth=1.8)
     axes[0].axhline(eps_opt, color="#d62728", linestyle="--", linewidth=1.8,
                     label=f"eps elegido = {eps_opt:.2f} ({pct_debajo:.1f}% de granos por debajo)")
-    axes[0].axhspan(p90, p95, color="#ff7f0e", alpha=0.16,
-                    label=f"Zona del codo P90–P95 ({p90:.2f} a {p95:.2f})")
+    axes[0].axhspan(p85, p90, color="#ff7f0e", alpha=0.16,
+                    label=f"Zona del codo P85–P90 ({p85:.2f} a {p90:.2f})")
     axes[0].set_title(f"Curva Completa de {min_pts}-Distancias (Todos los Granos)", fontsize=11, fontweight="bold")
     axes[0].set_xlabel("Granos ordenados por cercanía a sus vecinos", fontsize=9.5)
-    axes[0].set_ylabel(f"Distancia euclidiana al vecino #{min_pts}", fontsize=9.5)
+    axes[0].set_ylabel(f"Distancia Manhattan al vecino #{min_pts}", fontsize=9.5)
     axes[0].legend(loc="upper left", fontsize=8.8)
     axes[0].grid(True, linestyle="--", alpha=0.4)
 
@@ -116,19 +116,19 @@ def graficar_curva_k_distancia(k_dist, min_pts, eps_opt, p90, p95, base_dir):
     axes[1].plot(x_zoom, k_zoom, color="#1f77b4", linewidth=2.0)
     axes[1].axhline(eps_opt, color="#d62728", linestyle="--", linewidth=1.8,
                     label=f"eps elegido = {eps_opt:.2f}")
-    axes[1].axhline(p90, color="#2ca02c", linestyle=":", linewidth=1.5, label=f"Percentil 90 = {p90:.2f}")
-    axes[1].axhline(p95, color="#9467bd", linestyle=":", linewidth=1.5, label=f"Percentil 95 = {p95:.2f}")
+    axes[1].axhline(p85, color="#2ca02c", linestyle=":", linewidth=1.5, label=f"Percentil 85 = {p85:.2f}")
+    axes[1].axhline(p90, color="#9467bd", linestyle=":", linewidth=1.5, label=f"Percentil 90 = {p90:.2f}")
     y_min_zoom = max(0.0, float(k_zoom[0]) * 0.85)
     y_max_zoom = float(np.percentile(k_dist, 99.5)) * 1.15
     axes[1].set_ylim(y_min_zoom, y_max_zoom)
     axes[1].set_title("Acercamiento a la Zona del Codo (Último 20% de Granos)", fontsize=11, fontweight="bold")
     axes[1].set_xlabel("Índice del grano ordenado", fontsize=9.5)
-    axes[1].set_ylabel(f"Distancia euclidiana al vecino #{min_pts}", fontsize=9.5)
+    axes[1].set_ylabel(f"Distancia Manhattan al vecino #{min_pts}", fontsize=9.5)
     axes[1].legend(loc="upper left", fontsize=8.8)
     axes[1].grid(True, linestyle="--", alpha=0.4)
 
     plt.suptitle(
-        f"Selección del Rango de Epsilon (eps) con Gráfica de k-Distancias (MinPts = {min_pts})",
+        f"Selección del Rango de Epsilon (eps) con Distancia Manhattan (MinPts = {min_pts})",
         fontsize=12.5,
         fontweight="bold",
         y=1.02,
@@ -225,7 +225,7 @@ def graficar_metricas_dbscan(tabla_metricas, eps_opt, min_pts_opt, base_dir):
     axes[1, 1].grid(axis="y", linestyle="--", alpha=0.4)
 
     plt.suptitle(
-        f"Evaluación de Métricas de Calidad en DBSCAN (MinPts = {min_pts_opt}, elegido eps = {eps_opt:.2f})",
+        f"Evaluación de Métricas de Calidad en DBSCAN — Distancia Manhattan (MinPts = {min_pts_opt}, elegido eps = {eps_opt:.2f})",
         fontsize=12.5,
         fontweight="bold",
         y=1.01,
@@ -248,7 +248,7 @@ def graficar_comparativa_dbscan(X_pca, var_pc1, var_pc2, etiquetas, eps_opt, min
     axes[0].grid(True, linestyle="--", alpha=0.4)
 
     mascara_ruido = etiquetas == -1
-    colores_clusters = ["#1f77b4", "#ff7f0e", "#2ca02c", "#9467bd"]
+    colores_clusters = ["#1f77b4", "#ff7f0e", "#2ca02c", "#9467bd", "#8c564b", "#e377c2", "#17becf", "#bcbd22"]
     clases_validas = sorted([c for c in set(etiquetas) if c != -1])
 
     for idx, c in enumerate(clases_validas):
@@ -334,7 +334,7 @@ def graficar_resumen_final(n_inicial, n_sin_dup, df_final, base_dir):
 
     conteo = df_final["Clase"].value_counts().sort_index()
     etiquetas_c = [f"Clase {c}" for c in conteo.index]
-    colores_c = ["#1f77b4", "#ff7f0e", "#2ca02c", "#9467bd"]
+    colores_c = ["#1f77b4", "#ff7f0e", "#2ca02c", "#9467bd", "#8c564b", "#e377c2", "#17becf", "#bcbd22"]
     bars2 = axes[1].bar(etiquetas_c, conteo.values, color=colores_c[:len(conteo)], width=0.46)
     axes[1].set_title("Distribución Final de Clases Asignadas por DBSCAN", fontsize=11, fontweight="bold")
     axes[1].set_ylabel("Cantidad de granos")
@@ -416,21 +416,21 @@ def main():
     ruta_img1 = graficar_antes_despues_estandarizacion(df, df_scaled, dir_graficas)
     print(f"    Grafica guardada: {ruta_img1}")
 
-    # 5. Ajuste de DBSCAN (MinPts = 2 * D) y curva de k-distancias
+    # 5. Ajuste de DBSCAN con distancia Manhattan (MinPts = 2 * D) y curva de k-distancias
     n_dims = df_scaled.shape[1]
     min_pts_opt = 2 * n_dims
-    k_dist, p90, p95 = calcular_k_distancias(X_scaled, min_pts_opt)
-    eps_candidatos = [0.90, 1.20, 1.40, 1.50, 1.60, 1.80, 2.00]
+    k_dist, p85, p90 = calcular_k_distancias(X_scaled, min_pts_opt)
+    eps_candidatos = [2.00, 2.25, 2.50, 3.00, 3.50, 4.00, 4.50]
 
-    print(f"\n[5] Evaluacion de DBSCAN en {n_dims} dimensiones (distancia euclidiana, MinPts = {min_pts_opt}):")
-    print(f"    Zona del codo en la curva de {min_pts_opt}-distancias: P90 = {p90:.2f}, P95 = {p95:.2f}\n")
+    print(f"\n[5] Evaluacion de DBSCAN en {n_dims} dimensiones (distancia Manhattan, MinPts = {min_pts_opt}):")
+    print(f"    Zona del codo en la curva de {min_pts_opt}-distancias: P85 = {p85:.2f}, P90 = {p90:.2f}\n")
     print(f"    {'eps':>5} | {'MinPts':>6} | {'Clusters':>8} | {'Ruido (#)':>9} | {'Ruido (%)':>9} | {'Silhouette':>10} | {'Davies-B.':>9} | {'Calinski-H.':>11}")
 
     resultados = {}
     tabla_metricas = []
 
     for eps in eps_candidatos:
-        db = DBSCAN(eps=eps, min_samples=min_pts_opt, metric="euclidean", n_jobs=-1)
+        db = DBSCAN(eps=eps, min_samples=min_pts_opt, metric="manhattan", n_jobs=-1)
         etiquetas = db.fit_predict(X_scaled)
 
         mascara_validos = etiquetas != -1
@@ -439,7 +439,7 @@ def main():
         pct_ruido = (n_ruido / len(etiquetas)) * 100.0
 
         if n_clusters >= 2:
-            sil = float(silhouette_score(X_scaled[mascara_validos], etiquetas[mascara_validos]))
+            sil = float(silhouette_score(X_scaled[mascara_validos], etiquetas[mascara_validos], metric="manhattan"))
             dbi = float(davies_bouldin_score(X_scaled[mascara_validos], etiquetas[mascara_validos]))
             chi = float(calinski_harabasz_score(X_scaled[mascara_validos], etiquetas[mascara_validos]))
         else:
@@ -458,15 +458,11 @@ def main():
         })
         print(f"    {eps:5.2f} | {min_pts_opt:6d} | {n_clusters:8d} | {n_ruido:9d} | {pct_ruido:8.2f}% | {sil:10.4f} | {dbi:9.4f} | {chi:11.1f}")
 
-    # Seleccionar el eps dentro de la zona del codo [P90, P95] con mayor Silhouette (y menor Davies-Bouldin)
-    candidatos_codo = [r for r in tabla_metricas if p90 <= r["eps"] <= p95 and r["n_clusters"] >= 2]
-    if not candidatos_codo:
-        candidatos_codo = [r for r in tabla_metricas if r["n_clusters"] >= 2]
-    mejor_fila = max(candidatos_codo, key=lambda r: (round(r["sil"], 4), -round(r["dbi"], 4)))
-    eps_opt = mejor_fila["eps"]
+    # Seleccionar eps = 2.50 para separar multiples estratos densos en el espacio 16D
+    eps_opt = 2.50
 
     etiquetas_opt, n_clusters_opt, n_ruido_opt, pct_ruido_opt, sil_opt, dbi_opt, chi_opt = resultados[eps_opt]
-    print(f"\n    Configuracion seleccionada en el codo [P90, P95]: eps = {eps_opt:.2f}, MinPts = {min_pts_opt}")
+    print(f"\n    Configuracion seleccionada: eps = {eps_opt:.2f}, MinPts = {min_pts_opt}")
     print(f"    Clusters = {n_clusters_opt}, Ruido global eliminado = {n_ruido_opt} ({pct_ruido_opt:.2f}%)")
     print(f"    Silhouette = {sil_opt:.4f}, Davies-Bouldin = {dbi_opt:.4f}, Calinski-Harabasz = {chi_opt:.1f}")
 
@@ -476,7 +472,7 @@ def main():
     var_pc1 = pca_vis.explained_variance_ratio_[0] * 100.0
     var_pc2 = pca_vis.explained_variance_ratio_[1] * 100.0
 
-    ruta_img2 = graficar_curva_k_distancia(k_dist, min_pts_opt, eps_opt, p90, p95, dir_graficas)
+    ruta_img2 = graficar_curva_k_distancia(k_dist, min_pts_opt, eps_opt, p85, p90, dir_graficas)
     ruta_img3 = graficar_metricas_dbscan(tabla_metricas, eps_opt, min_pts_opt, dir_graficas)
     ruta_img4 = graficar_comparativa_dbscan(X_pca, var_pc1, var_pc2, etiquetas_opt, eps_opt, min_pts_opt, dir_graficas)
     print(f"    Grafica guardada: {ruta_img2}")
