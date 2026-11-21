@@ -14,18 +14,16 @@ from sklearn.decomposition import PCA
 
 
 def localizar_dataset(base_dir):
-    """Busca Dataset.csv en el directorio local, 1) Preprocesamiento o ASIGNACION."""
+    """Busca Dataset.csv en la carpeta de preprocesamiento o en la raiz del proyecto."""
     rutas_posibles = [
-        os.path.join(base_dir, "Dataset.csv"),
         os.path.join(base_dir, "..", "1) Preprocesamiento", "Dataset.csv"),
-        os.path.join(base_dir, "..", "ASIGNACION", "Dataset.csv"),
-        os.path.join(base_dir, "..", "..", "ASIGNACION", "Dataset.csv"),
-        os.path.join(base_dir, "ASIGNACION", "Dataset.csv"),
+        os.path.join(os.getcwd(), "PARTE_1", "1) Preprocesamiento", "Dataset.csv"),
+        os.path.join(base_dir, "Dataset.csv"),
     ]
     for ruta in rutas_posibles:
         if os.path.exists(ruta):
             return os.path.abspath(ruta)
-    raise FileNotFoundError("No se encontro el archivo Dataset.csv")
+    raise FileNotFoundError("No se encontro el archivo Dataset.csv en PARTE_1/1) Preprocesamiento/")
 
 
 def graficar_calidad_datos(df_raw, df_valid, base_dir):

@@ -17,17 +17,20 @@ from sklearn.metrics import silhouette_score, davies_bouldin_score, calinski_har
 
 
 def localizar_dataset(base_dir):
-    """Busca Dataset.csv en la carpeta actual o en ASIGNACION."""
-    rutas_posibles = [
-        os.path.join(base_dir, "Dataset.csv"),
-        os.path.join(base_dir, "..", "ASIGNACION", "Dataset.csv"),
-        os.path.join(base_dir, "..", "..", "ASIGNACION", "Dataset.csv"),
-        os.path.join(base_dir, "ASIGNACION", "Dataset.csv"),
+    """Carga Dataset.csv ubicado directamente en la carpeta de preprocesamiento."""
+    ruta_local = os.path.join(base_dir, "Dataset.csv")
+    if os.path.exists(ruta_local):
+        return os.path.abspath(ruta_local)
+
+    # Rutas de respaldo por si el script se ejecuta desde la raiz u otra carpeta
+    rutas_alternativas = [
+        os.path.join(os.getcwd(), "PARTE_1", "1) Preprocesamiento", "Dataset.csv"),
+        os.path.join(os.getcwd(), "Dataset.csv"),
     ]
-    for ruta in rutas_posibles:
+    for ruta in rutas_alternativas:
         if os.path.exists(ruta):
             return os.path.abspath(ruta)
-    raise FileNotFoundError("No se encontro el archivo Dataset.csv")
+    raise FileNotFoundError(f"No se encontro el archivo Dataset.csv en {ruta_local}")
 
 
 def graficar_antes_despues_estandarizacion(df_original, df_scaled, base_dir):
@@ -369,7 +372,8 @@ def main():
     # 1. Carga y eliminacion de columnas completamente vacias
     df = pd.read_csv(ruta_csv)
     n_inicial = df.shape[0]
-    print(f"[1] Carga inicial del dataset: {df.shape[0]} registros, {df.shape[1]} columnas.")
+    print(f"[1] Carga del dataset original desde: {ruta_csv}")
+    print(f"    Dimensiones iniciales: {df.shape[0]} registros, {df.shape[1]} columnas.")
 
     cols_vacias = [col for col in df.columns if df[col].isnull().all()]
     if cols_vacias:
