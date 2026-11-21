@@ -129,12 +129,12 @@ Para solucionar esto se utilizó **PCA (Análisis de Componentes Principales)**:
 
 ## 6. Resumen: Qué se encontró y Qué se hará en el Preprocesamiento
 
-Con base en todo lo observado, en `Preprocesamiento/preprocesamiento.py` se ejecutarán estos pasos:
+Con base en todo lo observado en el análisis, en `Preprocesamiento/preprocesamiento.py` se aplican los siguientes pasos directos:
 
-| Qué se encontró | Qué se hará en el preprocesamiento | Base teórica |
-| :--- | :--- | :--- |
-| La columna **`Unnamed: 16`** está `100%` vacía (`13,611` nulos) por una coma extra; las `16` columnas reales no tienen nulos. | Detectar y eliminar automáticamente cualquier columna completamente vacía, sin borrar filas válidas. | `4 Preprocesamiento de datos.pdf` (Diaps. 45 y 50) |
-| Hay **`68` filas duplicadas exactas (`0.50%`)**. | Eliminar duplicados con `drop_duplicates()` para no alterar la densidad ni los clusters. | `4 Preprocesamiento de datos.pdf` (Diaps. 32–35) |
-| Todas las `16` variables tienen varianza $> 0$ (no hay columnas constantes). | Comprobar que ninguna columna sea constante y mantener las `16` variables originales para el clustering. | `4 Preprocesamiento de datos.pdf` (Diap. 76); `9 Clustering.pdf` (Diaps. 11 y 20) |
-| Las escalas son muy distintas (`Area` hasta `254,616.0` vs `ShapeFactor2` desde `0.00056`). | Aplicar **Estandarización Z-score** (`StandardScaler`) para poner todas las variables en la misma escala antes de medir distancias. | `4 Preprocesamiento de datos.pdf` (Diap. 91); `9 Clustering.pdf` (Diaps. 11 y 21) |
-| Hay nubes de formas irregulares, densidades distintas y puntos aislados alrededor. | Aplicar **DBSCAN** sobre las `16` variables estandarizadas para detectar y eliminar el **ruido global**, evaluar el resultado con métricas internas (Silhouette, Davies-Bouldin, Calinski-Harabasz, n.º de clusters y % de ruido) y asignar la columna `Clase` a los grupos encontrados. | `4 Preprocesamiento de datos.pdf` (Diaps. 52, 59 y 62); `9 Clustering.pdf` (Diaps. 22–27 y 30) |
+| Qué se encontró | Qué se hará en el preprocesamiento |
+| :--- | :--- |
+| **Columna vacía `Unnamed: 16`:** Generada por una coma al final de cada fila del CSV (las 16 variables reales tienen 0 nulos). | **Eliminar la columna vacía.** No es necesario borrar ni rellenar filas porque los datos de los granos están completos. |
+| **68 filas duplicadas:** Registros repetidos exactamente iguales (0.50% del total). | **Borrar los duplicados** con `drop_duplicates()` para evitar que inflen la densidad artificialmente. |
+| **Varianza en todas las variables:** Ninguna columna es constante (todas varían y aportan información). | **Conservar las 16 variables** para la etapa de agrupamiento. |
+| **Escalas muy desiguales:** `Area` supera los 250,000 mientras que los factores de forma son menores a 0.01. | **Estandarizar con Z-score** (`StandardScaler`) para poner todas las variables en la misma escala (media 0 y desviación 1) y que ninguna domine al calcular distancias. |
+| **Formas irregulares y puntos aislados:** Grupos con distintas densidades y granos sueltos en las orillas. | **Aplicar DBSCAN** para detectar y eliminar los puntos de ruido global (`-1`), medir la calidad de los grupos con métricas y asignarles la columna **`Clase`**. |
