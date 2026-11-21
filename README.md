@@ -7,15 +7,15 @@ Proyecto para modelar mediante una Red Neuronal Artificial (RNA) los grupos obte
 ## Estructura del Proyecto
 
 * **`PARTE_1/`**: Desarrollo completo de la Etapa 1 (análisis exploratorio y preprocesamiento):
-  * **`PARTE_1/ANALISIS/`**: Código y carpeta `GRAFICAS/` del análisis exploratorio inicial.
+  * **`PARTE_1/Analisis/`**: Código y carpeta `GRAFICAS/` del análisis exploratorio inicial.
   * **`PARTE_1/1) Preprocesamiento/`**: Dataset original (`Dataset.csv`), código del **Inciso 1** (limpieza de datos, agrupamiento con DBSCAN), `dataset_preprocesado.csv` y carpeta `GRAFICAS/`.
 * **`Examen_Documento/`**: Redacción formal del examen en LaTeX (compatible con Overleaf) e imágenes en `Inciso_1/`.
 
 ---
 
-## 1. Carpeta `PARTE_1/ANALISIS/` (Exploración y Plan de Limpieza)
+## 1. Carpeta `PARTE_1/Analisis/` (Exploración y Plan de Limpieza)
 
-Contiene el script **`analisis_datos.py`** y las gráficas generadas en **`PARTE_1/ANALISIS/GRAFICAS/`** para revisar los datos originales:
+Contiene el script **`analisis_datos.py`** y las gráficas generadas en **`PARTE_1/Analisis/GRAFICAS/`** para revisar los datos originales:
 
 * **¿Qué se hizo?** Se generaron gráficas de calidad de datos, histogramas de distribución, matriz de correlación, dispersión en 2D y proyección PCA 2D.
 * **¿Para qué sirvió?** Para ver cómo venían los datos y definir el plan de limpieza:
@@ -44,7 +44,7 @@ Contiene el script **`preprocesamiento.py`** y las gráficas generadas en **`PAR
 
 1. **Ejecutar el análisis exploratorio:**
    ```bash
-   python PARTE_1/ANALISIS/analisis_datos.py
+   python PARTE_1/Analisis/analisis_datos.py
    ```
 
 2. **Ejecutar el preprocesamiento (Inciso 1):**
