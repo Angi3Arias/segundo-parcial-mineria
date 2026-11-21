@@ -1,0 +1,8 @@
+# Ignorar carpeta PDF_TEMAS
+PDF_TEMAS/
+
+# Ignorar archivos y carpetas temporales de Python (pycache)
+__pycache__/
+pycache/
+*.py[cod]
+*$py.class
