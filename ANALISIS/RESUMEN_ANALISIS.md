@@ -1,10 +1,10 @@
 # Análisis Exploratorio del Dataset (`Dataset.csv`)
 
-En esta etapa revisamos el archivo original **sin modificar ni borrar ningún dato**, y sin usar *boxplots*. El objetivo es entender qué contiene el dataset, detectar problemas de calidad y justificar de forma sencilla qué pasos se harán después en el preprocesamiento.
+En esta etapa realizamos una inspección inicial del archivo `Dataset.csv` con el objetivo de entender qué contienen los datos, detectar problemas de calidad y justificar los pasos a seguir en el preprocesamiento.
 
 ---
 
-## Descripción Original del Conjunto de Datos (`Dataset.txt`)
+## Traducción al español de la descripción original (`Dataset.txt`)
 
 - **Nombre del conjunto de datos:** `Dataset`
 - **Resumen:** 13,611 granos. Se obtuvieron un total de 16 características a partir de los granos: 12 dimensiones y 4 formas.
@@ -46,7 +46,7 @@ En esta etapa revisamos el archivo original **sin modificar ni borrar ningún da
 **¿Qué se encontró?**
 - El archivo tiene **`13,611` filas** y **`17` columnas**.
 - Las **`16` variables reales del grano** (`Area` hasta `ShapeFactor4`) están completas (**`0` valores nulos**) y todas son numéricas.
-- Aparece automáticamente una columna extra llamada **`Unnamed: 16`** con **`13,611` valores nulos (`100%` vacía)** por una coma al final de cada línea del CSV (es el lugar donde iba la clase). Esto confirma que el problema es de **Aprendizaje No Supervisado**.
+- Aparece automáticamente una columna extra llamada **`Unnamed: 16`** con **`13,611` valores nulos (`100%` vacía)** generada por una coma al final de cada línea en el archivo CSV.
 - Hay **`68` filas duplicadas exactas (`0.50%`)** y **`13,543` filas únicas (`99.50%`)**.
 
 ---
@@ -90,6 +90,12 @@ En esta etapa revisamos el archivo original **sin modificar ni borrar ningún da
 
 **¿Para qué sirve esta gráfica?** Para cruzar pares de variables en 2D y ver si los granos forman grupos separados o si hay puntos sueltos raros (posible ruido). Se eligieron pares que aportan información distinta en lugar de pares redundantes.
 
+**¿Qué significa el valor de "$r$" en el título de cada gráfica?**
+La letra **`r`** es el **coeficiente de correlación lineal de Pearson**, un número entre `-1.0` y `+1.0` que mide la relación entre las dos variables:
+- **Si $r$ es cercana a `+1`** (como en *Area vs Perimeter*, donde $r = 0.9667$): ambas variables aumentan juntas de forma proporcional y los puntos se alinean en una diagonal alargada.
+- **Si $r$ es moderada o baja** (como en *ShapeFactor1 vs ShapeFactor2*, donde $r = 0.4692$): las variables no dependen rígidamente una de la otra. Esto es muy útil porque **"abre" la nube de puntos en el plano**, permitiendo apreciar la separación real entre distintos tipos de granos, islas y vacíos que quedarían ocultos si solo graficáramos variables casi idénticas.
+- **Si $r$ fuera negativa** (cercana a `-1`): significaría que al aumentar una variable, la otra disminuye.
+
 **¿Qué se encontró?**
 - **`Area vs Perimeter` y `MajorAxisLength vs MinorAxisLength`:** Separan claramente la nube principal de granos pequeños/medianos del grupo de granos muy grandes, con algunos puntos sueltos entre ambos.
 - **`Area vs Compactness` y `Area vs roundness`:** Dejan ver varios grupos densos naturales al combinar tamaño con forma.
@@ -98,19 +104,26 @@ En esta etapa revisamos el archivo original **sin modificar ni borrar ningún da
 
 ---
 
-## 5. Proyección PCA 2D sin Etiquetas: Forma de la Nube y Densidad (`6_pca_2d_densidad.png`)
+## 5. Proyección PCA 2D: Forma de la Nube y Densidad (`6_pca_2d_densidad.png`)
 
-![Proyección PCA 2D sin etiquetas con alpha bajo y hexbin](6_pca_2d_densidad.png)
+![Proyección PCA 2D con alpha bajo y hexbin](6_pca_2d_densidad.png)
 
-**¿Para qué sirve esta gráfica?** Como no podemos dibujar 16 dimensiones a la vez, se usa **PCA solo como cámara visual** para proyectar las 16 variables a 2 ejes (`PC1 = 55.47%` y `PC2 = 26.43%`, conservando el **`81.90%`** de la información) sin usar colores de clase. El dataset **no se reduce**: esta proyección es únicamente para mirar la nube completa.
+### ¿Por qué se hizo esta proyección? (El problema de las 16 dimensiones)
+Cada grano tiene **16 características numéricas**. En una pantalla solo podemos ver gráficas en dos dimensiones (ejes X e Y), y si graficamos pares de variables individuales (como en los diagramas de dispersión anteriores), siempre estamos ignorando las otras 14 variables al mismo tiempo.
 
-- **Panel izquierdo (Alpha bajo):** Cada punto es casi transparente; donde se ve más oscuro es donde se enciman más granos. Muestra la **forma de la nube**.
-- **Panel derecho (Hexbin):** Cuenta cuántos granos caen en cada hexágono. Muestra **dónde hay mayor densidad**.
+Para solucionar esto se utilizó **PCA (Análisis de Componentes Principales)**:
+- Funciona como una **"cámara fotográfica" matemática**: busca la mejor perspectiva para proyectar las 16 variables en solo dos ejes principales (`PC1` y `PC2`).
+- A pesar de simplificar la vista a dos ejes, conserva **más del 81.9% de toda la información y variabilidad del dataset** (`PC1 = 55.47%` y `PC2 = 26.43%`).
+- **Aclaración importante:** El dataset **no se redujo** ni se eliminaron variables. Esta proyección se generó **únicamente como herramienta visual** para observar la estructura completa de los datos antes de pasar a la etapa de preprocesamiento, donde DBSCAN operará sobre las 16 dimensiones completas.
 
-**¿Qué se encontró?**
-1. **Formas irregulares y distintas densidades:** La nube no está hecha de bolitas redondas ni parejas; hay zonas alargadas y grupos más densos que otros (justo el tipo de datos donde *K-means* falla y donde conviene **DBSCAN**, `9 Clustering.pdf`, Diap. 22).
-2. **Zonas donde se acumulan los puntos:** Se distinguen 4 núcleos densos en la nube principal (el más oscuro abajo-izquierda, uno alargado arriba-izquierda y dos a la derecha) más **una isla separada arriba a la derecha** que es menos densa (los granos muy grandes).
-3. **Puntos sueltos en los bordes (gris muy claro):** Alrededor de las nubes aparecen puntos aislados con muy baja densidad (`1` a `2` granos por hexágono), que corresponden al **ruido global** que se filtrará después con DBSCAN.
+### ¿Cómo se interpretan los dos paneles de la gráfica?
+- **Panel izquierdo (Alpha bajo / semitransparencia):** Cada grano se dibuja con una transparencia alta. En las zonas donde se ve gris claro hay pocos datos; donde se observa completamente negro u oscuro es porque hay miles de granos encimados. Permite ver la **silueta y forma geométrica de la nube**.
+- **Panel derecho (Hexbin / mapa de densidad):** Divide la superficie en hexágonos y colorea cada uno según la cantidad de granos que caen dentro (en escala logarítmica). Permite ubicar con precisión **dónde están los núcleos con mayor concentración de granos y dónde hay puntos prácticamente aislados**.
+
+### ¿Qué nos enseñó esta gráfica y qué plan definió para el preprocesamiento?
+1. **Los datos NO forman esferas regulares:** La nube presenta curvaturas, ramificaciones y densidades muy distintas entre regiones. Esto descarta métodos clásicos que asumen grupos esféricos y de igual tamaño (como *K-means*).
+2. **Existen agrupaciones naturales y una isla separada:** Se observan núcleos densos dentro del bloque principal y, en la parte superior derecha, una isla independiente y menos densa que corresponde a los granos de mayor tamaño.
+3. **Presencia de puntos aislados (Ruido Global):** En las orillas exteriores y en los espacios vacíos entre densidades aparecen puntos flotando en solitario (hexágonos de gris muy tenue con solo 1 o 2 granos). Esto confirma la existencia de **ruido global** y justifica por qué la técnica indicada para la Etapa 1 es **DBSCAN**, el cual agrupa por densidad y separa automáticamente los puntos aislados asignándoles la etiqueta de ruido (`-1`).
 
 ---
 

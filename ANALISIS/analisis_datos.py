@@ -26,46 +26,39 @@ def localizar_dataset(base_dir):
     raise FileNotFoundError("No se encontro el archivo Dataset.csv")
 
 
-def detectar_columnas_vacias(df, ruta_csv):
-    """Detecta dinamicamente columnas 100% vacias y verifica si provienen de una coma final en el CSV."""
-    with open(ruta_csv, "r", encoding="utf-8-sig") as f:
-        primera_linea = f.readline().rstrip("\r\n")
-    tiene_coma_final = primera_linea.endswith(",")
-
-    hallazgos = []
-    total_cols = len(df.columns)
-    for pos, col in enumerate(df.columns, start=1):
-        if df[col].isnull().all():
-            es_por_coma = tiene_coma_final and pos == total_cols and str(col).startswith("Unnamed:")
-            hallazgos.append({"pos": pos, "nombre": col, "por_coma_final": es_por_coma})
-    return hallazgos
-
-
 def graficar_calidad_datos(df_raw, df_valid, base_dir):
     """Grafica valores faltantes por columna y proporcion de registros duplicados."""
     fig, axes = plt.subplots(1, 2, figsize=(14, 5.2))
 
     nulos = df_raw.isnull().sum()
+    total_raw = max(len(df_raw), 1)
+    max_nulos = max(int(nulos.max()), 1)
+    offset_x = max_nulos * 0.015
     colores_nulos = ["#d62728" if v > 0 else "#2ca02c" for v in nulos.values]
     axes[0].barh(nulos.index, nulos.values, color=colores_nulos, alpha=0.85)
     axes[0].set_title("Valores Faltantes por Columna (Dataset Original)", fontsize=11, fontweight="bold")
     axes[0].set_xlabel("Cantidad de valores nulos")
+    axes[0].set_xlim(0, max_nulos * 1.18)
     axes[0].invert_yaxis()
     axes[0].grid(True, axis="x", linestyle="--", alpha=0.4)
     for i, v in enumerate(nulos.values):
         if v > 0:
-            pct = (v / len(df_raw)) * 100.0
-            axes[0].text(v + 150, i, f"{v} ({pct:.0f}%)", va="center", fontsize=9, fontweight="bold", color="#d62728")
+            pct = (v / total_raw) * 100.0
+            axes[0].text(v + offset_x, i, f"{v} ({pct:.2f}%)", va="center", fontsize=9, fontweight="bold", color="#d62728")
 
     duplicados = int(df_valid.duplicated().sum())
     unicos = len(df_valid) - duplicados
+    total_valid = max(len(df_valid), 1)
+    max_y = max(unicos, duplicados, 1)
+    offset_y = max_y * 0.015
     etiquetas = [f"Registros únicos\n({unicos})", f"Duplicados exactos\n({duplicados})"]
     axes[1].bar(etiquetas, [unicos, duplicados], color=["#1f77b4", "#ff7f0e"], width=0.5)
     axes[1].set_title("Filas Únicas y Duplicadas", fontsize=11, fontweight="bold")
     axes[1].set_ylabel("Número de registros")
+    axes[1].set_ylim(0, max_y * 1.12)
     axes[1].grid(True, axis="y", linestyle="--", alpha=0.4)
-    axes[1].text(0, unicos + 200, f"{unicos / len(df_valid) * 100:.2f}%", ha="center", fontweight="bold")
-    axes[1].text(1, duplicados + 200, f"{duplicados / len(df_valid) * 100:.2f}%", ha="center", fontweight="bold")
+    axes[1].text(0, unicos + offset_y, f"{unicos / total_valid * 100:.2f}%", ha="center", fontweight="bold")
+    axes[1].text(1, duplicados + offset_y, f"{duplicados / total_valid * 100:.2f}%", ha="center", fontweight="bold")
 
     plt.suptitle("Valores Nulos o Duplicados en el Dataset", fontsize=12.5, fontweight="bold", y=1.02)
     plt.tight_layout()
@@ -85,13 +78,16 @@ def formatear_valor(val):
 
 
 def graficar_histogramas(df, base_dir):
-    """Grafica histogramas de las 16 variables en su escala original mostrando media, mediana, minimo y maximo."""
+    """Grafica histogramas de las variables numericas en su escala original mostrando media, mediana, minimo y maximo."""
     cols = df.columns.tolist()
-    fig, axes = plt.subplots(4, 4, figsize=(18, 14))
-    axes = axes.flatten()
+    n_vars = len(cols)
+    n_cols = 4
+    n_rows = int(np.ceil(n_vars / n_cols))
+    fig, axes = plt.subplots(n_rows, n_cols, figsize=(18, 3.5 * n_rows))
+    axes = np.atleast_1d(axes).flatten()
 
     for idx, col in enumerate(cols):
-        serie = df[col]
+        serie = df[col].dropna()
         media = serie.mean()
         mediana = serie.median()
         minimo = serie.min()
@@ -118,13 +114,18 @@ def graficar_histogramas(df, base_dir):
         axes[idx].set_xlabel(f"{col} (valor)", fontsize=9)
         axes[idx].set_ylabel("Frecuencia (n.º de granos)", fontsize=9)
         margen = (maximo - minimo) * 0.04
+        if margen == 0:
+            margen = 0.5
         axes[idx].set_xlim(minimo - margen, maximo + margen)
         axes[idx].grid(True, linestyle="--", alpha=0.35)
         axes[idx].tick_params(labelsize=8)
         axes[idx].legend(loc="best", fontsize=7.5, framealpha=0.92, edgecolor="#cccccc", handlelength=1.8)
 
+    for j in range(n_vars, len(axes)):
+        axes[j].set_visible(False)
+
     plt.suptitle(
-        "Histogramas de las 16 Variables (Media, Mediana, Mínimo y Máximo)",
+        f"Histogramas de las {n_vars} Variables (Media, Mediana, Mínimo y Máximo)",
         fontsize=13.5,
         fontweight="bold",
         y=1.01,
@@ -155,7 +156,7 @@ def graficar_matriz_correlacion(df, base_dir):
             ax.text(j, i, f"{val:.4f}", ha="center", va="center", color=color_txt, fontsize=6.2)
 
     fig.colorbar(im, ax=ax, fraction=0.046, pad=0.04, label="Correlación de Pearson (r)")
-    ax.set_title("Matriz de Correlación de Pearson entre las 16 Variables Originales", fontsize=12, fontweight="bold", pad=12)
+    ax.set_title(f"Matriz de Correlación de Pearson entre las {len(cols)} Variables", fontsize=12, fontweight="bold", pad=12)
     plt.tight_layout()
     ruta = os.path.join(base_dir, "3_matriz_correlacion.png")
     plt.savefig(ruta, dpi=200, bbox_inches="tight")
@@ -164,7 +165,7 @@ def graficar_matriz_correlacion(df, base_dir):
 
 
 def graficar_dispersion_original(df, base_dir):
-    """Grafica dos conjuntos de diagramas de dispersion en escala original para explorar grupos y anomalias."""
+    """Grafica diagramas de dispersion en escala original para explorar grupos y anomalias."""
     pares_geometria = [
         ("Area", "Perimeter", "Tamaño y Contorno (Area vs Perimeter)"),
         ("MajorAxisLength", "MinorAxisLength", "Ejes Geométricos (Major vs Minor Axis)"),
@@ -173,15 +174,29 @@ def graficar_dispersion_original(df, base_dir):
         ("ShapeFactor1", "ShapeFactor2", "Factores de Forma (ShapeFactor1 vs ShapeFactor2)"),
         ("Solidity", "roundness", "Regularidad del Grano (Solidity vs roundness)"),
     ]
+    pares_validos = [(cx, cy, t) for cx, cy, t in pares_geometria if cx in df.columns and cy in df.columns]
+    if not pares_validos and len(df.columns) >= 2:
+        cols_disp = df.columns.tolist()
+        pares_validos = [
+            (cols_disp[i], cols_disp[i + 1], f"{cols_disp[i]} vs {cols_disp[i + 1]}")
+            for i in range(0, min(len(cols_disp) - 1, 12), 2)
+        ]
 
-    fig1, axes1 = plt.subplots(2, 3, figsize=(18, 10.5))
-    axes1 = axes1.flatten()
-    for idx, (col_x, col_y, titulo) in enumerate(pares_geometria):
+    n_pares = len(pares_validos)
+    n_cols = 3
+    n_rows = max(int(np.ceil(n_pares / n_cols)), 1)
+    fig1, axes1 = plt.subplots(n_rows, n_cols, figsize=(18, 5.25 * n_rows))
+    axes1 = np.atleast_1d(axes1).flatten()
+    for idx, (col_x, col_y, titulo) in enumerate(pares_validos):
+        r = df[col_x].corr(df[col_y])
         axes1[idx].scatter(df[col_x], df[col_y], s=8, alpha=0.35, color="#1f77b4", edgecolors="none")
-        axes1[idx].set_title(titulo, fontsize=10.5, fontweight="bold")
+        axes1[idx].set_title(f"{titulo} (r = {r:.4f})", fontsize=10.5, fontweight="bold")
         axes1[idx].set_xlabel(col_x, fontsize=9.5)
         axes1[idx].set_ylabel(col_y, fontsize=9.5)
         axes1[idx].grid(True, linestyle="--", alpha=0.4)
+
+    for j in range(n_pares, len(axes1)):
+        axes1[j].set_visible(False)
 
     plt.suptitle(
         "Diagramas de Dispersión: Tamaño, Forma y Regularidad",
@@ -198,11 +213,12 @@ def graficar_dispersion_original(df, base_dir):
 
 def graficar_pca_densidad(df, base_dir):
     """
-    Proyecta las 16 variables a 2D con PCA sin colores de clase:
+    Proyecta las variables numericas a 2D con PCA sin colores de clase:
     Panel izquierdo: dispersion monocroma con alpha bajo para ver la forma de la nube.
     Panel derecho: mapa de densidad hexbin en escala de grises para ver donde se acumulan los puntos.
     """
-    X_norm = StandardScaler().fit_transform(df)
+    X_clean = df.dropna()
+    X_norm = StandardScaler().fit_transform(X_clean)
     pca = PCA(n_components=2, random_state=42)
     X_pca = pca.fit_transform(X_norm)
     var_pc1 = pca.explained_variance_ratio_[0] * 100.0
@@ -244,15 +260,12 @@ def main():
 
     print("ANALISIS EXPLORATORIO DEL DATASET ORIGINAL (SIN MODIFICAR DATOS)\n")
 
-    # 1. Carga original y deteccion dinamica de columnas vacias
+    # 1. Carga original y revision de columnas/nulos
     df_raw = pd.read_csv(ruta_csv)
     print(f"[1] Dimensiones originales: {df_raw.shape[0]} filas x {df_raw.shape[1]} columnas.")
-    hallazgos_vacias = detectar_columnas_vacias(df_raw, ruta_csv)
-    for h in hallazgos_vacias:
-        if h["por_coma_final"]:
-            print(f"    Aviso: Se detecto una coma al final del encabezado que genera la columna {h['pos']} ({h['nombre']}) completamente vacia; se eliminara en el preprocesamiento.")
-        else:
-            print(f"    Aviso: Se detecto la columna {h['pos']} ({h['nombre']}) completamente vacia; se eliminara en el preprocesamiento.")
+    cols_vacias = [col for col in df_raw.columns if df_raw[col].isnull().all()]
+    if cols_vacias:
+        print(f"    Aviso: Columnas 100% vacias detectadas: {', '.join(cols_vacias)} (se ignoraran en calculos y se eliminaran en el preprocesamiento).")
     print("    Tipos de datos detectados:")
     for col, dtype in df_raw.dtypes.items():
         nulos = int(df_raw[col].isnull().sum())
@@ -261,27 +274,38 @@ def main():
     # Separar vista solo con columnas no vacias para analizar estadisticas (sin alterar el archivo original)
     df_valid = df_raw.dropna(axis=1, how="all")
     num_duplicados = int(df_valid.duplicated().sum())
-    print(f"\n[2] Calidad de registros (sobre las {df_valid.shape[1]} columnas validas):")
+    print(f"\n[2] Calidad de registros (sobre las {df_valid.shape[1]} columnas no vacias):")
     print(f"    Registros totales:   {len(df_valid)}")
     print(f"    Registros unicos:    {len(df_valid) - num_duplicados}")
     print(f"    Duplicados exactos:  {num_duplicados}")
 
+    df_num = df_valid.select_dtypes(include=[np.number])
+    cols_no_num = [col for col in df_valid.columns if col not in df_num.columns]
+    if cols_no_num:
+        print(f"    Columnas no numericas excluidas del analisis estadistico: {', '.join(cols_no_num)}")
+
     # 3. Estadisticas descriptivas en escala original
     print("\n[3] Estadisticas descriptivas en escala original:")
     resumen = pd.DataFrame({
-        "Min": df_valid.min(),
-        "Mediana": df_valid.median(),
-        "Media": df_valid.mean(),
-        "Max": df_valid.max(),
-        "Std": df_valid.std(),
-        "Varianza": df_valid.var(),
-        "Extremos_|Z|>3": ((df_valid - df_valid.mean()).abs() > 3 * df_valid.std()).sum(),
+        "Min": df_num.min(),
+        "Mediana": df_num.median(),
+        "Media": df_num.mean(),
+        "Max": df_num.max(),
+        "Std": df_num.std(),
+        "Varianza": df_num.var(),
+        "Extremos_|Z|>3": ((df_num - df_num.mean()).abs() > 3 * df_num.std()).sum(),
     })
     print(resumen.round(4).to_string())
 
+    cols_var_cero = df_num.columns[df_num.var() == 0].tolist()
+    if cols_var_cero:
+        print(f"    Aviso: Variables con varianza cero: {', '.join(cols_var_cero)}")
+    else:
+        print("    Verificacion de varianza: ninguna variable tiene varianza cero.")
+
     # 4. Pares con correlacion muy alta (|r| > 0.95)
     print("\n[4] Pares de variables con correlacion lineal muy alta (|r| > 0.95):")
-    corr = df_valid.corr()
+    corr = df_num.corr()
     cols = corr.columns.tolist()
     for i in range(len(cols)):
         for j in range(i + 1, len(cols)):
@@ -293,10 +317,10 @@ def main():
     print("\n[5] Generando graficas de analisis exploratorio:")
     rutas = [
         graficar_calidad_datos(df_raw, df_valid, base_dir),
-        graficar_histogramas(df_valid, base_dir),
-        graficar_matriz_correlacion(df_valid, base_dir),
-        graficar_dispersion_original(df_valid, base_dir),
-        graficar_pca_densidad(df_valid, base_dir),
+        graficar_histogramas(df_num, base_dir),
+        graficar_matriz_correlacion(df_num, base_dir),
+        graficar_dispersion_original(df_num, base_dir),
+        graficar_pca_densidad(df_num, base_dir),
     ]
     for r in rutas:
         print(f"    Guardada: {r}")
