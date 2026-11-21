@@ -13,18 +13,18 @@ En esta etapa aplicamos en [preprocesamiento.py](preprocesamiento.py) todas las 
 
 Partiendo del archivo original (`13,611` filas $\times$ `17` columnas), el script realiza tres limpiezas básicas antes de cualquier cálculo:
 
-- **Eliminación de columna vacía (`4 Preprocesamiento de datos.pdf`, Diaps. 45 y 50):** Se detecta automáticamente la columna `Unnamed: 16` con `13,611` valores nulos (`100%` vacía por la coma final del CSV) y se elimina. Las `16` columnas válidas del grano tienen **`0` valores faltantes**, por lo que no hace falta imputar ni borrar filas por nulos.
-- **Eliminación de duplicados exactos (`4 Preprocesamiento de datos.pdf`, Diaps. 32–35):** Se eliminan **`68` filas repetidas** con `drop_duplicates(keep="first")`, dejando **`13,543` granos únicos**. Esto evita que filas repetidas inflen artificialmente la densidad de un punto en DBSCAN.
-- **Revisión de varianza cero (`4 Preprocesamiento de datos.pdf`, Diap. 76):** Se comprueba que las `16` variables tienen varianza mayor a cero (no hay columnas constantes), por lo que todas se conservan. No se usan métodos de selección supervisada porque en esta etapa todavía no existen etiquetas.
+- **Eliminación de columna vacía:** Se detecta automáticamente la columna `Unnamed: 16` con `13,611` valores nulos (`100%` vacía) y se elimina. Las `16` columnas válidas del grano tienen **`0` valores faltantes**, por lo que no hace falta imputar ni borrar filas por nulos.
+- **Eliminación de duplicados exactos:** Se eliminan **`68` filas repetidas** con `drop_duplicates(keep="first")`, dejando **`13,543` granos únicos**. Esto evita que filas repetidas inflen artificialmente la densidad de un punto en DBSCAN.
+- **Revisión de varianza cero:** Se comprueba que las `16` variables tienen varianza mayor a cero (no hay columnas constantes), por lo que todas se conservan. No se usan métodos de selección supervisada porque en esta etapa todavía no existen etiquetas.
 
 ---
 
-## 2. Estandarización Z-score (`1_antes_despues_estandarizacion.png`)
+## 2. Estandarización Z-score (`GRAFICAS/1_antes_despues_estandarizacion.png`)
 
-![Efecto de la estandarización Z-score antes y después](1_antes_despues_estandarizacion.png)
+![Efecto de la estandarización Z-score antes y después](GRAFICAS/1_antes_despues_estandarizacion.png)
 
 **¿Por qué se hace?**
-En el análisis vimos que `Area` llega hasta `254,616` mientras `ShapeFactor2` está alrededor de `0.0017`. Como DBSCAN mide distancias euclidianas entre granos, si no igualamos las escalas, `Area` dominaría por completo la distancia y las columnas pequeñas casi no contarían (`4 Preprocesamiento de datos.pdf`, Diap. 91; `9 Clustering.pdf`, Diaps. 11 y 21).
+En el análisis vimos que `Area` llega hasta `254,616` mientras `ShapeFactor2` está alrededor de `0.0017`. Como DBSCAN mide distancias euclidianas entre granos, si no igualamos las escalas, `Area` dominaría por completo la distancia y las columnas pequeñas casi no contarían.
 
 **¿Qué muestra la gráfica?**
 - **Fila superior (Antes):** Cada variable está en una escala totalmente distinta (`Area` en cientos de miles, `Perimeter` en cientos, `Solidity` entre `0.92` y `0.99`, `ShapeFactor2` en milésimas).
@@ -32,34 +32,34 @@ En el análisis vimos que `Area` llega hasta `254,616` mientras `ShapeFactor2` e
 
 ---
 
-## 3. Cómo se Ajustó DBSCAN: `MinPts` y Curva de $k$-Distancias (`2_curva_k_distancia_dbscan.png`)
+## 3. Cómo se Ajustó DBSCAN: `MinPts` y Curva de $k$-Distancias (`GRAFICAS/2_curva_k_distancia_dbscan.png`)
 
-![Curva de k-distancias para elegir el rango de epsilon](2_curva_k_distancia_dbscan.png)
+![Curva de k-distancias para elegir el rango de epsilon](GRAFICAS/2_curva_k_distancia_dbscan.png)
 
 **¿Por qué DBSCAN y no otros métodos?**
-- No usamos reglas univariadas como *IQR* o *Z-score > 3* columna por columna (`4 Preprocesamiento de datos.pdf`, Diap. 62), porque un grano puede ser grande en `Area` y aun así pertenecer a una variedad válida.
-- Tampoco usamos *K-means* (`4 Preprocesamiento de datos.pdf`, Diap. 58; `9 Clustering.pdf`, Diap. 22), porque mete todos los puntos a la fuerza en algún grupo y no separa el ruido global.
-- **DBSCAN** (`4 Preprocesamiento de datos.pdf`, Diap. 59; `9 Clustering.pdf`, Diaps. 22–25) busca zonas densas en las **16 dimensiones al mismo tiempo** y marca automáticamente como **ruido global (`-1`)** a los granos aislados que no pertenecen a ninguna zona densa.
+- No usamos reglas univariadas como *IQR* o *Z-score > 3* columna por columna, porque un grano puede ser grande en `Area` y aun así pertenecer a una variedad válida.
+- Tampoco usamos *K-means*, porque mete todos los puntos a la fuerza en algún grupo y no separa el ruido global.
+- **DBSCAN** busca zonas densas en las **16 dimensiones al mismo tiempo** y marca automáticamente como **ruido global (`-1`)** a los granos aislados que no pertenecen a ninguna zona densa.
 
 **¿Cómo se eligieron sus dos parámetros (`MinPts` y `eps`)?**
 1. **`MinPts = 32`:** Como trabajamos en `16` dimensiones ($D = 16$), aplicamos la regla estándar para varias dimensiones: $\text{MinPts} = 2 \times D = 32$ vecinos mínimos para formar una región densa.
 2. **Rango de `eps` ($\varepsilon$) con la curva de 32-distancias:** Para cada grano medimos la distancia euclidiana a su vecino número `32` más cercano y ordenamos esas distancias de menor a mayor:
    - Al principio la curva sube despacio (granos dentro de zonas densas).
-   - Al final (**panel derecho**, acercamiento al último 20%) la curva se dobla bruscamente hacia arriba ("el codo"), entre `1.20` y `1.80` (percentil 90 = `1.42`, percentil 95 = `1.76`): ahí es donde empiezan los puntos aislados (ruido global).
+   - Al final (**panel derecho**, acercamiento al último 20%) la curva se dobla bruscamente hacia arriba ("el codo"), entre `1.42` y `1.76` (percentil 90 = `1.42`, percentil 95 = `1.76`): ahí es donde empiezan los puntos aislados (ruido global).
 
 ---
 
-## 4. Evaluación con Métricas de Calidad (`3_metricas_calidad_dbscan.png`)
+## 4. Evaluación con Métricas de Calidad (`GRAFICAS/3_metricas_calidad_dbscan.png`)
 
-![Evaluación de métricas de calidad en DBSCAN](3_metricas_calidad_dbscan.png)
+![Evaluación de métricas de calidad en DBSCAN](GRAFICAS/3_metricas_calidad_dbscan.png)
 
-Siguiendo `9 Clustering.pdf` (Diaps. 26, 27 y 30), probamos distintos valores de `eps` alrededor del codo (manteniendo `MinPts = 32` y distancia euclidiana en **16D**) usando únicamente **métricas internas para datos sin etiquetas**:
+Probamos distintos valores de `eps` alrededor del codo (manteniendo `MinPts = 32` y distancia euclidiana en **16D**) usando únicamente **métricas internas para datos sin etiquetas**:
 - **Silhouette Score** (más cercano a `1` es mejor): mide qué tan bien agrupado y separado está cada cluster.
 - **Davies-Bouldin Index** (menor es mejor): mide si los grupos están compactos y lejos entre sí.
 - **Calinski-Harabasz Index** (mayor es mejor): compara la separación entre grupos contra la dispersión interna.
-- **Número de clusters y % de ruido global** (`9 Clustering.pdf`, Diap. 30).
+- **Número de clusters y % de ruido global**.
 
-*(No se usan ARI ni NMI porque requieren etiquetas reales, ni el Método del Codo de inercia porque es de K-means; `9 Clustering.pdf`, Diaps. 28 y 29).*
+*(No se usan ARI ni NMI porque requieren etiquetas reales, ni el Método del Codo de inercia porque es exclusivo de K-means).*
 
 | `eps` ($\varepsilon$) | `MinPts` | Clusters | Ruido global (`-1`) | % de Ruido | Silhouette ($\uparrow$) | Davies-Bouldin ($\downarrow$) | Calinski-Harabasz ($\uparrow$) |
 | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
@@ -75,13 +75,13 @@ Siguiendo `9 Clustering.pdf` (Diaps. 26, 27 y 30), probamos distintos valores de
 - Con `eps = 0.90` se borra demasiado del dataset (`21.72%`) y la calidad cae (`Silhouette = 0.2416`, `Davies-Bouldin = 0.9698`).
 - Con `eps = 1.20` el `Silhouette` es parecido (`0.5731`), pero elimina casi la mitad de la nube de granos grandes como si fuera ruido (`6.90%` total) y su `Calinski-Harabasz` es bajo (`2,515.2`).
 - Con `eps = 2.00` el radio es demasiado grande y deja pasar casi todos los puntos periféricos (`0.95%` de ruido), empeorando `Davies-Bouldin` (`0.5356`).
-- En **`eps = 1.50`** se logra el mejor equilibrio justo en el codo: **2 clusters muy bien separados** (`Silhouette = 0.5703`, `Davies-Bouldin = 0.5136`, `Calinski-Harabasz = 3,664.6`), conserva casi intacta la nube de granos grandes (`436` granos) y elimina únicamente los **`402` granos realmente aislados (`2.97%`)** como ruido global.
+- En **`eps = 1.50`** (seleccionado automáticamente dentro del rango `[P90, P95]`) se logra el mejor equilibrio justo en el codo: **2 clusters muy bien separados** (`Silhouette = 0.5703`, `Davies-Bouldin = 0.5136`, `Calinski-Harabasz = 3,664.6`), conserva casi intacta la nube de granos grandes (`436` granos) y elimina únicamente los **`402` granos realmente aislados (`2.97%`)** como ruido global.
 
 ---
 
-## 5. Resultado Visual de DBSCAN y Eliminación del Ruido Global (`4_dbscan_clustering_y_ruido.png`)
+## 5. Resultado Visual de DBSCAN y Eliminación del Ruido Global (`GRAFICAS/4_dbscan_clustering_y_ruido.png`)
 
-![Comparativa antes, durante y después de DBSCAN](4_dbscan_clustering_y_ruido.png)
+![Comparativa antes, durante y después de DBSCAN](GRAFICAS/4_dbscan_clustering_y_ruido.png)
 
 **¿Qué muestra la gráfica?**
 Aunque DBSCAN se ejecutó sobre las **16 variables completas**, aquí proyectamos el resultado en **PCA 2D** solo para poder verlo en pantalla:
@@ -96,9 +96,9 @@ Aunque DBSCAN se ejecutó sobre las **16 variables completas**, aquí proyectamo
 
 ---
 
-## 6. Dataset Final y Clases Asignadas (`5_resumen_preprocesamiento_y_clases.png`)
+## 6. Dataset Final y Clases Asignadas (`GRAFICAS/5_resumen_preprocesamiento_y_clases.png`)
 
-![Resumen de limpieza y distribución final de clases](5_resumen_preprocesamiento_y_clases.png)
+![Resumen de limpieza y distribución final de clases](GRAFICAS/5_resumen_preprocesamiento_y_clases.png)
 
 Al eliminar los `402` puntos marcados como ruido global (`-1`) y asignar la etiqueta de **`Clase`** a los grupos descubiertos, el dataset preprocesado se guarda en **`dataset_preprocesado.csv`**:
 
@@ -118,8 +118,8 @@ Al eliminar los `402` puntos marcados como ruido global (`-1`) y asignar la etiq
 
 | Requisito de la Etapa 1 | Cómo se cumplió | Evidencia |
 | :--- | :--- | :--- |
-| Eliminar problemas del dataset (ruido, desviaciones, etc.) | Se eliminó la columna vacía `Unnamed: 16`, los `68` duplicados exactos, se corrigieron las escalas con **Z-score** y se eliminaron `402` puntos de ruido global. | `1_antes_despues_estandarizacion.png` y `5_resumen_preprocesamiento_y_clases.png` |
-| Usar **DBSCAN** para detección de ruido global ajustado al dataset | Se usó `MinPts = 2 × 16 = 32`, curva de 32-distancias y búsqueda de `eps` en el codo, eligiendo `eps = 1.50` sobre el espacio 16D. | `2_curva_k_distancia_dbscan.png` y `4_dbscan_clustering_y_ruido.png` |
-| Elegir métricas para medir la calidad de los estratos | Se evaluaron **Silhouette (`0.5703`)**, **Davies-Bouldin (`0.5136`)**, **Calinski-Harabasz (`3,664.6`)**, n.º de clusters (`2`) y % de ruido (`2.97%`). | `3_metricas_calidad_dbscan.png` y tabla de la Sección 4 |
-| Documentar cómo se aplicó el algoritmo al problema | Documentado paso a paso con gráficas y referencias a las diapositivas del curso. | Este documento (`RESUMEN_PREPROCESAMIENTO.md`) |
+| Eliminar problemas del dataset (ruido, desviaciones, etc.) | Se eliminó la columna vacía `Unnamed: 16`, los `68` duplicados exactos, se corrigieron las escalas con **Z-score** y se eliminaron `402` puntos de ruido global. | `GRAFICAS/1_antes_despues_estandarizacion.png` y `GRAFICAS/5_resumen_preprocesamiento_y_clases.png` |
+| Usar **DBSCAN** para detección de ruido global ajustado al dataset | Se usó `MinPts = 2 × 16 = 32`, curva de 32-distancias y búsqueda de `eps` en el codo, eligiendo `eps = 1.50` sobre el espacio 16D. | `GRAFICAS/2_curva_k_distancia_dbscan.png` y `GRAFICAS/4_dbscan_clustering_y_ruido.png` |
+| Elegir métricas para medir la calidad de los estratos | Se evaluaron **Silhouette (`0.5703`)**, **Davies-Bouldin (`0.5136`)**, **Calinski-Harabasz (`3,664.6`)**, n.º de clusters (`2`) y % de ruido (`2.97%`). | `GRAFICAS/3_metricas_calidad_dbscan.png` y tabla de la Sección 4 |
+| Documentar cómo se aplicó el algoritmo al problema | Documentado paso a paso con gráficas y explicación directa del procedimiento. | Este documento (`RESUMEN_PREPROCESAMIENTO.md`) |
 | Generar el archivo de código y asignar valor de clase a los grupos | Código implementado y dataset limpio con columna `Clase` (`0` y `1`) guardado. | `preprocesamiento.py` y `dataset_preprocesado.csv` |

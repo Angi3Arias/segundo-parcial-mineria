@@ -39,7 +39,7 @@ En esta etapa realizamos una inspección inicial del archivo `Dataset.csv` con e
 
 ## 1. Valores Nulos o Duplicados en el Dataset (`1_calidad_y_nulos.png`)
 
-![Valores nulos o duplicados en el Dataset](1_calidad_y_nulos.png)
+![Valores nulos o duplicados en el Dataset](GRAFICAS/1_calidad_y_nulos.png)
 
 **¿Para qué sirve esta gráfica?** Para revisar si el archivo viene con datos faltantes o filas repetidas antes de hacer cualquier cálculo.
 
@@ -53,7 +53,7 @@ En esta etapa realizamos una inspección inicial del archivo `Dataset.csv` con e
 
 ## 2. Distribuciones (`2_distribuciones_histogramas.png`)
 
-![Histogramas de las 16 variables](2_distribuciones_histogramas.png)
+![Histogramas de las 16 variables](GRAFICAS/2_distribuciones_histogramas.png)
 
 **¿Para qué sirve esta gráfica?** Para ver qué valores toma cada variable (mínimo, máximo, media y mediana) y en qué zonas se concentra la mayoría de los granos.
 
@@ -72,7 +72,7 @@ En esta etapa realizamos una inspección inicial del archivo `Dataset.csv` con e
 
 ## 3. Correlaciones y Redundancias (`3_matriz_correlacion.png`)
 
-![Matriz de correlación de Pearson](3_matriz_correlacion.png)
+![Matriz de correlación de Pearson](GRAFICAS/3_matriz_correlacion.png)
 
 **¿Para qué sirve esta gráfica?** Para ver qué variables suben o bajan juntas (es decir, qué columnas miden casi lo mismo).
 
@@ -91,7 +91,7 @@ En esta etapa realizamos una inspección inicial del archivo `Dataset.csv` con e
 
 ## 4. Diagramas de Dispersión (`4_dispersion_variables_originales.png`)
 
-![Diagramas de dispersión: tamaño, forma y regularidad](4_dispersion_variables_originales.png)
+![Diagramas de dispersión: tamaño, forma y regularidad](GRAFICAS/4_dispersion_variables_originales.png)
 
 **¿Para qué sirve esta gráfica?** Para cruzar pares de variables en 2D y ver si los granos forman grupos separados o si hay puntos sueltos raros (posible ruido). Se eligieron pares que aportan información distinta en lugar de pares redundantes.
 
@@ -111,7 +111,7 @@ La letra **`r`** es el **coeficiente de correlación lineal de Pearson**, un nú
 
 ## 5. Proyección PCA 2D: Forma de la Nube y Densidad (`6_pca_2d_densidad.png`)
 
-![Proyección PCA 2D con alpha bajo y hexbin](6_pca_2d_densidad.png)
+![Proyección PCA 2D con alpha bajo y hexbin](GRAFICAS/6_pca_2d_densidad.png)
 
 ### ¿Por qué se hizo esta proyección? (El problema de las 16 dimensiones)
 Cada grano tiene **16 características numéricas**. En una pantalla solo podemos ver gráficas en dos dimensiones (ejes X e Y), y si graficamos pares de variables individuales (como en los diagramas de dispersión anteriores), siempre estamos ignorando las otras 14 variables al mismo tiempo.
@@ -135,7 +135,7 @@ Para solucionar esto se utilizó **PCA (Análisis de Componentes Principales)**:
 
 ## 6. Resumen: Qué se encontró y Qué se hará en el Preprocesamiento
 
-Con base en todo lo observado en el análisis, en `Preprocesamiento/preprocesamiento.py` se aplican los siguientes pasos directos:
+Con base en todo lo observado en el análisis, en `1) Preprocesamiento/preprocesamiento.py` se aplican los siguientes pasos directos:
 
 | Qué se encontró | Qué se hará en el preprocesamiento |
 | :--- | :--- |

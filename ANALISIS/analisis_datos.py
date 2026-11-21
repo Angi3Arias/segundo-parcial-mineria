@@ -256,6 +256,8 @@ def graficar_pca_densidad(df, base_dir):
 
 def main():
     base_dir = os.path.dirname(os.path.abspath(__file__))
+    dir_graficas = os.path.join(base_dir, "GRAFICAS")
+    os.makedirs(dir_graficas, exist_ok=True)
     ruta_csv = localizar_dataset(base_dir)
 
     print("ANALISIS EXPLORATORIO DEL DATASET ORIGINAL (SIN MODIFICAR DATOS)\n")
@@ -316,11 +318,11 @@ def main():
     # 5. Generacion de graficas de analisis
     print("\n[5] Generando graficas de analisis exploratorio:")
     rutas = [
-        graficar_calidad_datos(df_raw, df_valid, base_dir),
-        graficar_histogramas(df_num, base_dir),
-        graficar_matriz_correlacion(df_num, base_dir),
-        graficar_dispersion_original(df_num, base_dir),
-        graficar_pca_densidad(df_num, base_dir),
+        graficar_calidad_datos(df_raw, df_valid, dir_graficas),
+        graficar_histogramas(df_num, dir_graficas),
+        graficar_matriz_correlacion(df_num, dir_graficas),
+        graficar_dispersion_original(df_num, dir_graficas),
+        graficar_pca_densidad(df_num, dir_graficas),
     ]
     for r in rutas:
         print(f"    Guardada: {r}")
