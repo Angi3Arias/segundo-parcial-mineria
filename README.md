@@ -1,53 +1,62 @@
-# Segundo Parcial - Minería de Datos (BUAP)
+# Segundo Parcial — Minería de Datos (BUAP - FCC)
 
-Proyecto para modelar mediante una Red Neuronal Artificial (RNA) los grupos obtenidos a partir de la base de datos de granos (`Dataset.csv`).
-
----
-
-## Estructura del Proyecto
-
-* **`PARTE_1/`**: Desarrollo completo de la Etapa 1 (análisis exploratorio y preprocesamiento):
-  * **`PARTE_1/Analisis/`**: Código y carpeta `GRAFICAS/` del análisis exploratorio inicial.
-  * **`PARTE_1/1) Preprocesamiento/`**: Dataset original (`Dataset.csv`), código del **Inciso 1** (limpieza de datos, agrupamiento con DBSCAN), `dataset_preprocesado.csv` y carpeta `GRAFICAS/`.
-* **`Examen_Documento/`**: Redacción formal del examen en LaTeX (compatible con Overleaf) e imágenes en `Inciso_1/`.
+Proyecto para construir un modelo de clasificación basado en una Red Neuronal Artificial (RNA) que modele el comportamiento de los clusters identificados con **DBSCAN** a partir de la base de datos de granos (`Dataset.csv`).
 
 ---
 
-## 1. Carpeta `PARTE_1/Analisis/` (Exploración y Plan de Limpieza)
+## Organización del Proyecto
 
-Contiene el script **`analisis_datos.py`** y las gráficas generadas en **`PARTE_1/Analisis/GRAFICAS/`** para revisar los datos originales:
-
-* **¿Qué se hizo?** Se generaron gráficas de calidad de datos, histogramas de distribución, matriz de correlación, dispersión en 2D y proyección PCA 2D.
-* **¿Para qué sirvió?** Para ver cómo venían los datos y definir el plan de limpieza:
-  1. Se detectó una columna vacía al final (`Unnamed: 16`) y 68 filas duplicadas.
-  2. Se identificó una gran diferencia de escalas (por ejemplo, `Area` supera los 200,000 mientras que los factores de forma son menores a 0.01), lo que hizo indispensable estandarizar.
-  3. Se confirmó la presencia de puntos aislados en las orillas que debían tratarse como ruido global.
+```text
+.
+├── PARTE_1/
+│   ├── Analisis/
+│   │   ├── analisis_datos.py            # Script de análisis exploratorio (sin modificar datos)
+│   │   ├── RESUMEN_ANALISIS.md          # Hallazgos del análisis y plan de limpieza
+│   │   └── GRAFICAS/                    # Gráficas exploratorias (calidad, histogramas, correlación, dispersión y PCA)
+│   └── 1) Preprocesamiento/
+│       ├── Dataset.csv                  # Dataset original (13,611 filas x 17 columnas)
+│       ├── preprocesamiento.py          # Script del Inciso 1 (limpieza, Z-score y DBSCAN)
+│       ├── dataset_preprocesado.csv     # Dataset limpio con columna Clase (13,094 filas x 17 columnas)
+│       ├── RESUMEN_PREPROCESAMIENTO.md  # Explicación paso a paso del preprocesamiento y métricas
+│       └── GRAFICAS/                    # Gráficas de estandarización, k-distancias, métricas, DBSCAN y clases
+│
+└── Examen_Documento/                    # Desarrollo del reporte formal en LaTeX (compatible con Overleaf)
+    ├── main.tex                         # Documento principal en LaTeX
+    ├── Escudos/                         # Escudos institucionales (BUAP y FCC)
+    └── Inciso_1/                        # Gráficas usadas en la redacción del Inciso 1
+```
 
 ---
 
-## 2. Carpeta `PARTE_1/1) Preprocesamiento/` (Inciso 1 del Examen)
+## Resumen de cada Carpeta
 
-Contiene el script **`preprocesamiento.py`** y las gráficas generadas en **`PARTE_1/1) Preprocesamiento/GRAFICAS/`**, donde se implementa el plan definido en el análisis cumpliendo con la **Etapa 1**:
+### 1. `PARTE_1/Analisis/` (Análisis Exploratorio)
+Revisa `Dataset.csv` sin modificar ningún valor para diagnosticar los problemas antes de limpiar:
+- Detecta la columna vacía `Unnamed: 16` (`100%` nulos) y `68` filas duplicadas exactas.
+- Identifica diferencias extremas de escala (`Area` hasta `254,616` vs `ShapeFactor2` en `0.0017`).
+- Muestra la estructura de **5 nubes con distintas densidades** y puntos aislados en las orillas (ruido global).
 
-1. **Limpieza:** Se eliminó la columna vacía residual y las filas duplicadas.
-2. **Estandarización:** Se aplicó Z-score (`StandardScaler`) a las 16 variables numéricas para que todas tengan el mismo peso.
-3. **Detección de Ruido con DBSCAN:**
-   - Se ajustaron los parámetros con la curva de distancias ($\text{MinPts} = 32$, $\varepsilon = 1.50$).
-   - Se evaluó la calidad con métricas internas (*Silhouette*, *Davies-Bouldin* y *Calinski-Harabasz*).
-   - Se detectó y eliminó el **ruido global** (402 puntos marcados con `-1`).
-4. **Asignación de Clases:** Se asignó la columna **`Clase`** a los clusters encontrados (`Clase 0` y `Clase 1`).
-5. **Archivo Resultante:** Se generó **`dataset_preprocesado.csv`**, listo para la etapa de muestreo.
+### 2. `PARTE_1/1) Preprocesamiento/` (Inciso 1 del Examen)
+Implementa en `preprocesamiento.py` la limpieza y el agrupamiento solicitado en la Etapa 1:
+1. **Limpieza:** elimina `Unnamed: 16`, quita `68` duplicados (`13,543` granos únicos) y verifica varianza $> 0$.
+2. **Estandarización Z-score:** centra las `16` variables numéricas en media `0.00` y desviación estándar `1.00`.
+3. **DBSCAN Multinivel (distancia Manhattan, `MinPts = 32`):** calcula los niveles de `eps` desde los percentiles de la curva de 32-distancias (`P20 = 1.60`, `P50 = 2.25`, `P90 = 4.00`), filtra **`449` puntos de ruido global (`3.32%`)** y separa las **5 clases naturales**.
+4. **Métricas de calidad:** `Silhouette Score = 0.3943`, `Calinski-Harabasz = 8,709.6`, `5` clases y `3.32%` de ruido.
+5. **Salida:** guarda `dataset_preprocesado.csv` (`13,094` filas × `17` columnas: `16` variables + `Clase` de `0` a `4`), listo para la Etapa 2 (Muestreo).
+
+### 3. `Examen_Documento/` (Reporte en LaTeX)
+Contiene el desarrollo del reporte entregable en **LaTeX** (`main.tex`), junto con los escudos institucionales (`Escudos/`) y las gráficas integradas por inciso (`Inciso_1/`), listo para compilar en Overleaf o en local.
 
 ---
 
 ## ¿Cómo ejecutar el código?
 
-1. **Ejecutar el análisis exploratorio:**
+1. **Análisis exploratorio:**
    ```bash
    python PARTE_1/Analisis/analisis_datos.py
    ```
 
-2. **Ejecutar el preprocesamiento (Inciso 1):**
+2. **Preprocesamiento (Inciso 1):**
    ```bash
    python "PARTE_1/1) Preprocesamiento/preprocesamiento.py"
    ```

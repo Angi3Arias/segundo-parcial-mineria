@@ -1,97 +1,90 @@
-# Resumen de Preprocesamiento (Inciso 1 del Examen)
+# Etapa 1: Preprocesamiento y Detección de Ruido Global con DBSCAN
 
-Este documento explica de forma clara y directa cómo funciona el script [`preprocesamiento.py`](preprocesamiento.py) para cumplir con lo solicitado en la **Etapa 1** del examen: limpiar los datos, elegir la medida de distancia, ajustar DBSCAN para eliminar el ruido global, medir la calidad de los grupos y asignarles su etiqueta de clase.
+En esta etapa se ejecuta [`preprocesamiento.py`](preprocesamiento.py) sobre `Dataset.csv` para limpiar los datos, aplicar DBSCAN en la detección de ruido global, evaluar la calidad de los grupos y asignar una etiqueta de `Clase`.
 
 ---
 
-## 1. Limpieza de los Datos
+## 1. Limpieza y Estandarización
 
-El archivo original `Dataset.csv` tiene 13,611 filas y 17 columnas. Se realizaron tres pasos de limpieza:
+A partir de `Dataset.csv` (`13,611` filas y `17` columnas) se hicieron tres pasos básicos:
 
-1. **Eliminar columna vacía:** Se quitó la columna `Unnamed: 16` porque estaba 100% vacía (generada por una coma de más al final del CSV). Las 16 variables reales del grano no tienen ningún valor nulo.
-2. **Eliminar duplicados:** Se quitaron **68 filas repetidas**, quedando **13,543 registros únicos**. Esto evita que datos repetidos alteren el cálculo de densidades.
-3. **Estandarización (Z-score):** Variables como el `Area` tienen valores de hasta 254,000, mientras que otras como `ShapeFactor2` valen 0.0017. Si no se estandarizan, el cálculo de distancias de DBSCAN solo tomaría en cuenta el área. Con Z-score, todas las 16 variables quedan con media 0 y desviación estándar 1, teniendo el mismo peso.
+1. **Quitar la columna vacía:** se eliminó `Unnamed: 16` (estaba `100%` vacía por una coma extra al final del CSV). Las `16` variables del grano no tienen datos faltantes ni varianza cero.
+2. **Quitar duplicados:** se eliminaron **`68` filas repetidas**, quedando **`13,543` granos únicos**.
+3. **Estandarizar con Z-score:** como `Area` llega a `254,616` y `ShapeFactor2` ronda `0.0017`, se aplicó `StandardScaler` para dejar las `16` variables con media `0.00` y desviación estándar `1.00`, de modo que todas pesen igual al medir distancias.
 
 ![Antes y después de la estandarización](GRAFICAS/1_antes_despues_estandarizacion.png)
 
 ---
 
-## 2. Medida de Distancia y Ajuste de DBSCAN
+## 2. Medida de Distancia y Ajuste de DBSCAN Multinivel
 
-Antes de ejecutar DBSCAN se define cómo se medirá la cercanía entre granos (`9 Clustering.pdf`, Diaps. 5, 11 y 21):
+- **Distancia Manhattan ($L_1$):** suma las diferencias absolutas entre las 16 variables (`metric="manhattan"`). Es rápida y menos sensible a valores extremos en una sola columna.
+- **`MinPts = 32`:** regla práctica calculada a partir del número de variables ($\text{MinPts} = 2 \times 16 = 32$).
 
-- **Distancia Manhattan ($L_1$):** $d(x, y) = \sum_{i=1}^{16} |x_i - y_i|$. Es una métrica formal con bajo costo computacional y, en varias dimensiones (16D), es menos sensible a valores extremos aislados en una sola variable que la distancia euclidiana (que eleva las diferencias al cuadrado).
+### ¿Por qué aplicamos un DBSCAN Multinivel (por niveles de densidad)?
+En el análisis exploratorio vimos que las **5 nubes de granos no tienen la misma densidad**: las dos de la izquierda están muy pegadas (alta densidad), las de centro y abajo a la derecha tienen densidad media, y la isla de arriba a la derecha está mucho más dispersa (baja densidad).
 
-DBSCAN necesita dos parámetros principales: `MinPts` (mínimo de puntos para formar un grupo) y `eps` (radio de distancia Manhattan).
+Si se usara un solo `eps` fijo para todo el dataset:
+- Con un **`eps` pequeño** se separan las dos nubes muy pegadas de la izquierda, pero las demás se pierden como ruido.
+- Con un **`eps` grande** se alcanza a detectar la isla dispersa de arriba, pero las 4 nubes de abajo se pegan en una sola.
 
-1. **`MinPts = 32`:** Como el dataset tiene 16 variables numéricas ($D = 16$), se usa la regla práctica:
-   $$\text{MinPts} = 2 \times D = 32$$
-2. **Curva de 32-distancias Manhattan para encontrar `eps`:** Se calculó la distancia Manhattan de cada grano a su vecino número 32 más cercano y se ordenaron de menor a mayor.
-   - En la gráfica se observa el inicio del "codo" (donde la curva empieza a subir con fuerza) entre **3.56** (P85) y **4.02** (P90). Los puntos por encima de esa zona son datos aislados (ruido global).
+Para **ajustar DBSCAN a los requerimientos del dataset**, calculamos **3 niveles de `eps` directamente desde los percentiles de la curva de 32-distancias** (redondeados al múltiplo de `0.05` más cercano):
+1. **Nivel 3 — Filtro de ruido global (`P90`, `eps = 4.00`):** separa el **ruido global real (`-1`)** de las regiones válidas del dataset (elimina únicamente los **`449` puntos aislados = `3.32%`** sin comerse los bordes de ningún grupo) y separa la isla dispersa de arriba a la derecha (`Clase 4`).
+2. **Niveles 1 y 2 — Núcleos internos (`P20`, `eps = 1.60` y `P50`, `eps = 2.25`):** localizan los 4 núcleos densos dentro de la nube principal (**arriba-izquierda**, **abajo-izquierda**, **centro-derecha** y **abajo-derecha**).
+3. **Asignación de las 5 clases:** cada punto válido que pasó el filtro de ruido global (`P90`) se asigna a su núcleo interno más cercano en distancia Manhattan, conservando completos los 5 grupos.
 
-![Curva de k-distancias](GRAFICAS/2_curva_k_distancia_dbscan.png)
+![Curva de 32-distancias Manhattan](GRAFICAS/2_curva_k_distancia_dbscan.png)
 
 ---
 
-## 3. Métricas de Calidad de los Grupos
+## 3. Métricas de Calidad
 
-Para elegir el mejor valor de `eps` dentro del inicio del codo, se evaluaron las tres métricas estándar de calidad de agrupamiento (`9 Clustering.pdf`, Diaps. 27 y 30):
+Evaluamos los estratos generados con dos métricas de calidad más el conteo de clases y el porcentaje de ruido global:
+- **Silhouette Score (con distancia Manhattan):** mide qué tan parecidos son los granos de un mismo grupo frente a los demás (entre `-1` y `1`; más cercano a `1` es mejor).
+- **Calinski-Harabasz Index:** compara qué tan separados están los grupos contra qué tan apretados están por dentro (**mientras más alto, mejor**).
+- **Número de clases** y **porcentaje de ruido global (`-1`)**.
 
-* **Silhouette con distancia Manhattan (más alto es mejor):** Mide qué tan separados y bien definidos están los grupos.
-* **Davies-Bouldin (más bajo es mejor):** Mide la dispersión dentro de cada grupo y la distancia entre ellos.
-* **Calinski-Harabasz (más alto es mejor):** Relaciona la separación entre clusters con su compacidad.
-
-| `eps` | MinPts | Grupos | Ruido (#) | % Ruido | Silhouette ($\uparrow$) | Davies-Bouldin ($\downarrow$) | Calinski-Harabasz ($\uparrow$) |
-| :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| 2.00 | 32 | 5 | 5,889 | 43.48% | 0.4889 | 0.9891 | 826.6 |
-| 2.25 | 32 | 3 | 4,376 | 32.31% | 0.5131 | 0.7933 | 4,095.2 |
-| **2.50** | **32** | **4** | **3,196** | **23.60%** | **0.4026** | **1.0376** | **3,794.7** |
-| 3.00 | 32 | 2 | 1,587 | 11.72% | 0.5582 | 0.3974 | 510.4 |
-| 3.50 | 32 | 2 | 768 | 5.67% | 0.5543 | 0.4824 | 2,616.0 |
-| 4.00 | 32 | 2 | 449 | 3.32% | 0.5534 | 0.5066 | 3,310.4 |
-| 4.50 | 32 | 2 | 256 | 1.89% | 0.5542 | 0.5232 | 3,743.0 |
+| Configuración (`MinPts = 32`) | Clases | Ruido (#) | % Ruido | Silhouette Score | Calinski-Harabasz |
+| :---: | :---: | :---: | :---: | :---: | :---: |
+| `P20 (eps = 1.60)` | 2 | 8,168 | 60.31% | 0.4894 | 6,409.1 |
+| `P50 (eps = 2.25)` | 3 | 4,376 | 32.31% | 0.5131 | 4,095.2 |
+| `P90 (eps = 4.00)` | 2 | 449 | 3.32% | 0.5534 | 3,310.4 |
+| **Multinivel** | **5** | **449** | **3.32%** | **0.3943** | **8,709.6** |
 
 ![Métricas de calidad DBSCAN](GRAFICAS/3_metricas_calidad_dbscan.png)
 
-**Configuración elegida: `eps = 2.50`, `MinPts = 32` y `metric = "manhattan"`**
-Al usar `eps = 2.50`, DBSCAN logra romper los puentes de densidad entre subgrupos y separar **4 clusters bien diferenciados** con un Calinski-Harabasz alto ($3,794.7$) y Silhouette positivo ($0.4026$), descartando como ruido global los **3,196 granos (23.60%)** que se encuentran en zonas de transición o baja densidad.
+El enfoque **Multinivel** obtiene el **Calinski-Harabasz más alto (`8,709.6`, más del doble que con 2 clases)**, un **Silhouette Score positivo (`0.3943`, normal cuando 5 grupos reales comparten fronteras cercanas en 16 dimensiones)**, y conserva el **`96.68%`** de los granos únicos (eliminando solo el **`3.32%`** de ruido global real).
 
 ---
 
-## 4. Eliminación de Ruido y Visualización
+## 4. Eliminación de Ruido Global
 
-Al aplicar DBSCAN con distancia Manhattan y estos parámetros:
-- Se identifican **4 clusters naturales**.
-- Se detectan **3,196 puntos de ruido global** (granos atípicos o en zonas dispersas, marcados con etiqueta `-1`).
-- Se eliminan estos 3,196 puntos de ruido, dejando los 4 grupos limpios y claramente delimitados.
+Los **`449` granos (`3.32%`)** que quedan aislados fuera de las regiones densas (`P90`) se marcan como **ruido global (`-1`)** y se eliminan del dataset. En la gráfica (proyectada en PCA 2D solo para ver el resultado) se aprecia el antes, el ruido en rojo únicamente en las orillas y los 5 grupos completos:
 
 ![Agrupamiento con DBSCAN y eliminación de ruido](GRAFICAS/4_dbscan_clustering_y_ruido.png)
 
 ---
 
-## 5. Asignación de Clases y Dataset Resultante
+## 5. Clases Asignadas y Dataset Final
 
-A los datos limpios se les asignó formalmente la columna **`Clase`** según el grupo identificado por DBSCAN:
+A los **`13,094` registros limpios** se les agregó la columna **`Clase`** y se guardaron en [`dataset_preprocesado.csv`](dataset_preprocesado.csv) (`13,094` filas × `17` columnas):
 
-* **Clase 0:** 7,854 granos (75.91%)
-* **Clase 1:** 1,178 granos (11.38%)
-* **Clase 2:** 198 granos (1.91%)
-* **Clase 3:** 1,117 granos (10.80%)
-* **Total final:** **10,347 registros** con 17 columnas (16 variables estandarizadas + `Clase`).
-
-El archivo final se guardó como [`dataset_preprocesado.csv`](dataset_preprocesado.csv).
+- **Clase 0 (arriba-izquierda):** `2,026` granos (`15.47%`)
+- **Clase 1 (abajo-izquierda):** `6,298` granos (`48.10%`)
+- **Clase 2 (centro-derecha):** `2,638` granos (`20.15%`)
+- **Clase 3 (abajo-derecha):** `1,734` granos (`13.24%`)
+- **Clase 4 (isla arriba-derecha):** `398` granos (`3.04%`)
 
 ![Resumen final del preprocesamiento y clases](GRAFICAS/5_resumen_preprocesamiento_y_clases.png)
 
 ---
 
-## Resumen de lo Solicitado vs lo Realizado
+## Cumplimiento del Inciso 1 del Examen
 
-| Requisito del Examen | ¿Qué se hizo? |
+| Requisito | Cumplimiento |
 | :--- | :--- |
-| **Limpieza de problemas:** | Se quitó la columna vacía, los 68 duplicados y se estandarizó con Z-score. |
-| **Medida de distancia y DBSCAN:** | Se usó **distancia Manhattan** y se ajustaron los parámetros ($\text{MinPts}=32$, $\text{eps}=2.50$) separando 4 estratos densos. |
-| **Métricas de calidad:** | Se evaluaron Silhouette (Manhattan), Davies-Bouldin y Calinski-Harabasz. |
-| **Documentación:** | Se explicó el procedimiento paso a paso respaldado por las 5 gráficas. |
-| **Archivo `preprocesamiento.py`:** | Script funcional que ejecuta todo el flujo de forma automática. |
-| **Asignar valor de clase:** | Se crearon las etiquetas `Clase 0`, `Clase 1`, `Clase 2` y `Clase 3` en `dataset_preprocesado.csv`. |
+| Limpiar problemas del dataset | Se quitó `Unnamed: 16`, `68` duplicados, se verificó varianza $> 0$ y se aplicó Z-score. |
+| Detectar ruido global con DBSCAN | DBSCAN Multinivel con distancia Manhattan (`MinPts = 32`, `P20 / P50 / P90`) eliminó `449` puntos de ruido global (`3.32%`). |
+| Elegir métricas de calidad | Silhouette Score (`0.3943`), Calinski-Harabasz (`8,709.6`), número de clases (`5`) y `%` de ruido (`3.32%`). |
+| Documentación y script | Este documento, 5 gráficas y [`preprocesamiento.py`](preprocesamiento.py). |
+| Asignar valor de clase | Columna `Clase` (`0` a `4`) en [`dataset_preprocesado.csv`](dataset_preprocesado.csv). |
