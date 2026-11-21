@@ -14,9 +14,10 @@ from sklearn.decomposition import PCA
 
 
 def localizar_dataset(base_dir):
-    """Busca Dataset.csv en la carpeta ASIGNACION o en el directorio local."""
+    """Busca Dataset.csv en el directorio local, 1) Preprocesamiento o ASIGNACION."""
     rutas_posibles = [
         os.path.join(base_dir, "Dataset.csv"),
+        os.path.join(base_dir, "..", "1) Preprocesamiento", "Dataset.csv"),
         os.path.join(base_dir, "..", "ASIGNACION", "Dataset.csv"),
         os.path.join(base_dir, "ASIGNACION", "Dataset.csv"),
     ]
