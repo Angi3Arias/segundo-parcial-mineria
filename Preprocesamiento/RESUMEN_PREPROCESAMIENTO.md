@@ -89,7 +89,10 @@ Aunque DBSCAN se ejecutó sobre las **16 variables completas**, aquí proyectamo
 2. **Centro:** El resultado de DBSCAN (`eps = 1.50, MinPts = 32`): identifica el **Cluster 0** (azul, `12,705` granos), el **Cluster 1** (naranja, `436` granos grandes) y marca en **cruces rojas (`-1`)** los **`402` puntos de ruido global** que flotan aislados en las orillas y entre nubes.
 3. **Derecha:** El dataset limpio final tras eliminar las cruces rojas, con las fronteras de ambos grupos mucho más limpias y definidas.
 
-*(Nota sobre DBSCAN: los subgrupos cercanos de la nube azul se unen en un solo estrato porque comparten puentes de densidad en 16D, mientras que la isla superior derecha queda claramente separada; esto es coherente con la característica de DBSCAN señalada en `9 Clustering.pdf`, Diap. 25).*
+**¿Por qué resultan 2 clases y no 4 si en el análisis se veían 4 zonas negras y 1 nube gris?**
+- **Las 4 zonas negras están pegadas:** Como tienen muchos puntos intermedios que las conectan sin dejar espacio vacío entre ellas, DBSCAN las une en un solo grupo continuo (**`Clase 0`**). Si achicáramos el radio `eps` (a `0.70` u `0.80`) para forzar que esas 4 zonas se separen, DBSCAN borraría entre el `32%` y el `45%` de todo el dataset como si fuera ruido y empeorarían las métricas de calidad.
+- **La nube gris de arriba sí es una clase (`Clase 1`) y no ruido:** Aunque en el mapa de densidad se veía gris más claro por tener menos cantidad de datos, agrupa a `436` granos grandes muy parecidos entre sí (todos con al menos `32` vecinos cercanos) y está completamente separada de la nube principal.
+- **El ruido real (`-1`) son solo las orillas:** Únicamente los `402` puntos (`2.97%`) que quedaron sueltos alrededor de las nubes sin vecinos suficientes se eliminan.
 
 ---
 

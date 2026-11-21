@@ -120,10 +120,11 @@ Para solucionar esto se utilizó **PCA (Análisis de Componentes Principales)**:
 - **Panel izquierdo (Alpha bajo / semitransparencia):** Cada grano se dibuja con una transparencia alta. En las zonas donde se ve gris claro hay pocos datos; donde se observa completamente negro u oscuro es porque hay miles de granos encimados. Permite ver la **silueta y forma geométrica de la nube**.
 - **Panel derecho (Hexbin / mapa de densidad):** Divide la superficie en hexágonos y colorea cada uno según la cantidad de granos que caen dentro (en escala logarítmica). Permite ubicar con precisión **dónde están los núcleos con mayor concentración de granos y dónde hay puntos prácticamente aislados**.
 
-### ¿Qué nos enseñó esta gráfica y qué plan definió para el preprocesamiento?
-1. **Los datos NO forman esferas regulares:** La nube presenta curvaturas, ramificaciones y densidades muy distintas entre regiones. Esto descarta métodos clásicos que asumen grupos esféricos y de igual tamaño (como *K-means*).
-2. **Existen agrupaciones naturales y una isla separada:** Se observan núcleos densos dentro del bloque principal y, en la parte superior derecha, una isla independiente y menos densa que corresponde a los granos de mayor tamaño.
-3. **Presencia de puntos aislados (Ruido Global):** En las orillas exteriores y en los espacios vacíos entre densidades aparecen puntos flotando en solitario (hexágonos de gris muy tenue con solo 1 o 2 granos). Esto confirma la existencia de **ruido global** y justifica por qué la técnica indicada para la Etapa 1 es **DBSCAN**, el cual agrupa por densidad y separa automáticamente los puntos aislados asignándoles la etiqueta de ruido (`-1`).
+### ¿Qué se observa en la gráfica y qué plan definió para el preprocesamiento?
+1. **Las 4 zonas más negras que se ven juntas (abajo a la izquierda):** Se distinguen 4 núcleos muy oscuros donde se acumulan miles de granos, pero están **conectados entre sí** por zonas grises intermedias sin un espacio vacío que los separe por completo.
+2. **La nube gris separada (arriba a la derecha):** Aunque se ve en tonos grises más claros que las 4 zonas negras, **no es ruido**: es un grupo compacto de más de 400 granos de gran tamaño (`Area > 125,000`). Se ve gris y no negro simplemente porque hay menos cantidad de granos grandes que de granos medianos/pequeños.
+3. **Los puntos sueltos en las orillas (Ruido Global):** Alrededor de las nubes, en los bordes exteriores, aparecen puntos aislados (hexágonos muy pálidos con solo 1 o 2 granos lejos de cualquier grupo).
+4. **Por qué esto define usar DBSCAN:** Como las nubes no son círculos parejos y tienen puntos sueltos alrededor, *K-means* no sirve para limpiarlos. En cambio, **DBSCAN** agrupa las zonas conectadas por densidad y separa automáticamente esos puntos sueltos de las orillas como **ruido global (`-1`)**.
 
 ---
 
