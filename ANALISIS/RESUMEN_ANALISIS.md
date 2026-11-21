@@ -112,8 +112,8 @@ La letra **`r`** es el **coeficiente de correlación lineal de Pearson**, un nú
 Cada grano tiene **16 características numéricas**. En una pantalla solo podemos ver gráficas en dos dimensiones (ejes X e Y), y si graficamos pares de variables individuales (como en los diagramas de dispersión anteriores), siempre estamos ignorando las otras 14 variables al mismo tiempo.
 
 Para solucionar esto se utilizó **PCA (Análisis de Componentes Principales)**:
-- Funciona como una **"cámara fotográfica" matemática**: busca la mejor perspectiva para proyectar las 16 variables en solo dos ejes principales (`PC1` y `PC2`).
-- A pesar de simplificar la vista a dos ejes, conserva **más del 81.9% de toda la información y variabilidad del dataset** (`PC1 = 55.47%` y `PC2 = 26.43%`).
+- Calcula combinaciones lineales de las 16 variables para encontrar las dos direcciones con mayor dispersión (`PC1` y `PC2`), proyectando los datos multidimensionales en un plano 2D.
+- Estos dos primeros componentes conservan **el 81.90% de la varianza total de los datos** (`PC1 = 55.47%` y `PC2 = 26.43%`).
 - **Aclaración importante:** El dataset **no se redujo** ni se eliminaron variables. Esta proyección se generó **únicamente como herramienta visual** para observar la estructura completa de los datos antes de pasar a la etapa de preprocesamiento, donde DBSCAN operará sobre las 16 dimensiones completas.
 
 ### ¿Cómo se interpretan los dos paneles de la gráfica?
